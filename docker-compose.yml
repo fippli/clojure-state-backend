@@ -1,0 +1,12 @@
+# compose file for dev purposes
+version: "3"
+
+services:
+  app:
+    build: .
+    volumes:
+      - .:/usr/src/app
+    command: "ring server-headless 80"
+    ports:
+      - "8000:80"
+    working_dir: /usr/src/app
