@@ -1,7 +1,8 @@
 (ns state-backend.core
   (:require
    [state-backend.response :refer [create-response]]
-   [clojure.data.json :as json]))
+   [clojure.data.json :as json]
+   [clojure.string]))
 
 ;; Read the initial state from the db
 ;; This is where we store the state of the user
@@ -9,55 +10,59 @@
 (defn initial-state
   "Create initial state"
   []
-  {:title "Lorem Ipsum"
-   :description "Lorem ipsum dolor sit amet, consectetur adipiscing elit. Pellentesque vel scelerisque ligula. Aliquam dapibus scelerisque ipsum sed blandit. Suspendisse consectetur commodo ipsum, at rhoncus nibh aliquet non. Vestibulum sit amet mi neque. Class aptent taciti sociosqu ad litora torquent per conubia nostra, per inceptos himenaeos. Aliquam nibh libero, molestie sit amet suscipit sit amet, gravida at purus. Sed ac luctus ligula, et volutpat mauris. Curabitur a mattis erat. Aenean vehicula sollicitudin libero, id tristique augue efficitur et. Maecenas ut dignissim ante."
-   :form {}})
+  {:initial-state-message " This is the initial state message to see that all is ok!"})
 
 (def state (atom (initial-state)))
 
-(defn set-state-key
+(defn set-state-key!
   ""
-  [key]
-  (fn [payload]
-    (swap!
-     state
-     (fn [next-state]
-       (assoc next-state key payload)))))
+  [key payload]
+  (swap!
+   state
+   (fn [next-state]
+     (assoc next-state key payload))))
 
-(defn update-state-key
+(defn update-state-key!
   ""
-  [key]
-  (fn [payload]
-    (swap!
-     state
-     (fn [next-state]
-       (assoc next-state key (merge (key next-state) payload))))))
+  [key payload]
+  (swap!
+   state
+   (fn [next-state]
+     (assoc next-state key (merge (key next-state) payload)))))
 
-(defn delete-state-key
+(defn delete-state-key!
   ""
   [key]
-  (fn []
-    (swap!
-     state
-     (fn [next-state]
-       (dissoc next-state key)))))
+  (swap!
+   state
+   (fn [next-state]
+     (dissoc next-state key))))
 
 ;; Defines a mapping between an action type and
 ;; a function. No undefined action types should be allowed
-(def action-map {"SET_DESCRIPTION" (set-state-key :description)
-                 "UPDATE_FORM" (update-state-key :form)
-                 "DELETE_TITLE" (delete-state-key :title)})
+(defn action-map
+  ""
+  [func-key key payload]
+  (case func-key
+    :set (set-state-key! key payload)
+    :update (update-state-key! key payload)
+    :delete (delete-state-key! key)
+    @state))
 
-;; Dispatcher
-(defn action-switch
-  "Dispatch an action on the state"
+(defn parse-action
+  ""
   [action]
-  ;; Handle all incoming dispatches
-  (->
-   action-map
-   (get (:type action))
-   (apply [(:payload action)])
-   (create-response 200)))
+  (as-> action $
+    (:type $)
+    (clojure.string/split $ #"\_")
+    (action-map
+     ;; fn-key
+     (keyword (clojure.string/lower-case (first $)))
+     ;; key
+     (keyword (clojure.string/lower-case (second $)))
+     ;; payload
+     (:payload action))))
+
 
 (defn dispatch
   ""
@@ -66,7 +71,8 @@
       (:body)
       (slurp)
       (json/read-str :key-fn keyword)
-      (action-switch)))
+      (parse-action)
+      (create-response 200)))
 
 (defn get-state
   "Get the current state"
