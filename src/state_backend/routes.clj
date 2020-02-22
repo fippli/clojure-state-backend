@@ -5,12 +5,15 @@
                            GET
                            POST]]
    [state-backend.core :refer [dispatch
-                               get-state]]))
+                               get-state
+                               create-user-state]]))
 
 (defroutes routes
   (POST "/dispatch" request (dispatch request))
 
   (GET "/state" [] (get-state))
+
+  (POST "/state" request (create-user-state request))
 
   (GET "/health" [] "Authentication service health ok!")
 
