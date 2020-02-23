@@ -75,8 +75,6 @@
      ;; user id
      user-id)))
 
-
-
 (defn authorize-token
   ""
   [request secret]
