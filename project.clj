@@ -10,7 +10,8 @@
                  [javax.servlet/servlet-api "2.5"]
                  [ring "1.8.0"]
                  [compojure "1.6.1"]
-                 [org.clojure/data.json "0.2.6"]]
+                 [org.clojure/data.json "0.2.6"]
+                 [buddy/buddy-sign "3.1.0"]]
 
   :main ^:skip-aot state-backend.main
 

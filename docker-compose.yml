@@ -10,3 +10,5 @@ services:
     ports:
       - "8000:80"
     working_dir: /usr/src/app
+    environment:
+      TOKEN_SECRET: password
