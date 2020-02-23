@@ -2,7 +2,8 @@
   (:require
    [state-backend.response :refer [create-response]]
    [clojure.data.json :as json]
-   [clojure.string]))
+   [clojure.string]
+   [buddy.sign.jwt :as jwt]))
 
 ;; Read the initial state from the db
 ;; This is where we store the state of the user
@@ -63,29 +64,46 @@
   [action user-id]
   (as-> action $
     (:type $)
-    (clojure.string/split $ #"\_")
+    (clojure.string/split $ #"\_") ; SET_FIELD -> [ SET FIELD ]
     (action-map
      ;; fn-key
-     (keyword (clojure.string/lower-case (first $)))
+     (keyword (clojure.string/lower-case (first $))) ; -> :set
      ;; key
-     (keyword (clojure.string/lower-case (second $)))
+     (keyword (clojure.string/lower-case (second $))) ; -> :field
      ;; payload
      (:payload action)
      ;; user id
      user-id)))
 
-(defn get-user-id
-  "TODO: Get user id from token"
-  [request-body]
+
+
+(defn authorize-token
+  ""
+  [request secret]
+  (->
+   request
+   (:headers)
+   (get "authorization")
+   (clojure.string/split #" ")
+   (nth 1)
+   (jwt/unsign secret)))
+
+(defn get-user-id!
+  "Get the user id from the request token"
+  [request]
   ;; temp solution for testing
-  (keyword (:user-id request-body)))
+  (->
+   request
+   (authorize-token (System/getenv "TOKEN_SECRET"))
+   (:user-id)
+   (keyword)))
 
 (defn dispatch
   ""
   [request]
   (as-> (slurp (:body request)) $
     (json/read-str $ :key-fn keyword)
-    (parse-action $ (get-user-id $))
+    (parse-action $ (get-user-id! request))
     (create-response $ 200)))
 
 (defn get-state
